@@ -213,7 +213,7 @@ body>header.topbar{display:block}
 .reader:fullscreen .reader-lesson{display:none}
 @media(max-width:640px){.reader-bar{position:static}#rd-lesson{order:3;width:100%;max-width:none}}
 /* الكتابة على الكتاب */
-.ink-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:8px 10px}
+.ink-bar{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;overflow:hidden}
 .ink-group{display:flex;align-items:center;gap:6px;padding-inline-end:10px;border-inline-end:1px solid var(--line-soft)}
 .ink-group:last-child{border:0;margin-inline-start:auto;padding:0}
 .mx .ink-tool{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border-radius:10px;border:0;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500}
@@ -234,3 +234,22 @@ body>header.topbar{display:block}
 @media(max-width:640px){.ink-tool span{display:none}.ink-group{padding-inline-end:6px}}
 .page-wrap .ink.over{pointer-events:none!important}
 .ink-hint{font-size:14px;color:var(--muted)}
+
+/* شريط أدوات الكتاب: صف الأدوات ثم صف الخيارات */
+.ink-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px}
+.ink-row .ink-group:last-child{margin-inline-start:0}
+.ink-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#FAF9F6;border-top:1px solid var(--line-soft);min-height:56px}
+.ink-sub .ink-group:last-child{margin-inline-start:0}
+.ink-sub .ink-group:last-of-type{border:0}
+.ink-seg{display:flex;gap:4px;background:#ECE9E2;padding:4px;border-radius:12px}
+.mx .ink-seg .ink-tool{min-height:40px}
+.mx .ink-seg .ink-tool[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px #17212d22}
+.mx .ink-icon{width:44px;height:44px;min-height:0;padding:0;border-radius:10px;border:0;background:transparent;color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center}
+.mx .ink-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mx .ink-icon:hover{background:var(--primary-softer);filter:none}
+.mx .ink-icon[aria-pressed=true]{background:var(--ink);color:#fff}
+.ink-shapes{flex-wrap:wrap}
+.ink-sub select{width:auto;min-height:44px;padding:6px 10px;border-radius:10px;font-size:15px}
+.ink-text-edit{position:absolute;z-index:4;margin:0;padding:2px 4px;border:1.5px dashed #0F6E64;border-radius:4px;background:rgba(255,255,255,.55);resize:none;overflow:hidden;outline:none;box-sizing:border-box;min-height:0}
+@media(max-width:640px){.ink-sub{gap:6px}.ink-seg .ink-tool span{display:inline}}
+.ink-row .ink-group{flex-wrap:wrap}
