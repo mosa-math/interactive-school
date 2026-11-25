@@ -1,0 +1,4 @@
+export function openSchoolDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('interactive-school-v3',1);r.onupgradeneeded=()=>{for(const name of ['lessons','books'])if(!r.result.objectStoreNames.contains(name))r.result.createObjectStore(name,{keyPath:'id'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(Error('تعذر فتح الحفظ المحلي.'));});}
+export async function record(store,mode,operation){const db=await openSchoolDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(store,mode),r=operation(tx.objectStore(store));tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(Error('تعذر حفظ الملف محليًا.'));});}finally{db.close();}}
+export const getLessons=()=>record('lessons','readonly',s=>s.getAll());
+export const putBook=b=>record('books','readwrite',s=>s.put(b));
