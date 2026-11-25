@@ -264,3 +264,13 @@ body>header.topbar{display:block}
 /* التكبير بإصبعين داخل صفحة الكتاب بدل تكبير المتصفح */
 .reader-stage{touch-action:pan-x pan-y}
 .page-wrap{will-change:transform}
+
+/* وضع ملء الشاشة الثابت (لا يخرج عند السحب على الآيباد) */
+body.reading-focus{overflow:hidden;overscroll-behavior:none}
+.reader.focus{position:fixed;inset:0;z-index:1000;margin:0;padding:10px max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);gap:8px}
+.reader.focus .reader-lesson{display:none}
+.reader.focus .reader-bar{position:sticky;top:0}
+.reader.focus .reader-stage{min-height:0}
+.reader.focus .reader-bar{position:static}
+.reader.focus .ink-bar{position:sticky;top:0;z-index:6;box-shadow:0 4px 14px #17212d1a}
+.reader.focus>*{flex-shrink:0}

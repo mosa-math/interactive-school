@@ -42,7 +42,7 @@ function refreshOptions(){const sub=document.querySelector('#ink-bar .ink-sub');
 function lessonAt(gid,page){const c=curriculum[gid];if(!c)return null;for(const [ci,ch] of c.chapters.entries())for(const [ii,it] of ch.items.entries())if(page>=it.from&&page<=it.to)return {it,ci,ii,ch};return null;}
 
 export async function renderReader(root,g,startPage){
-  state={g,page:Math.max(1,Number(startPage)||1),zoom:state.g?.id===g.id?state.zoom:1,total:0};
+  state={g,page:Math.max(1,Number(startPage)||1),zoom:state.g?.id===g.id?state.zoom:1,total:0,focus:false};document.body.classList.remove('reading-focus');
   const c=curriculum[g.id];
   root.innerHTML=`<nav class="mx-crumbs" aria-label="المسار"><a href="#home">صفوفي</a><span aria-hidden="true">/</span><a href="#grade/${g.id}">الصف ${esc(g.name)}</a><span aria-hidden="true">/</span><span>الكتاب</span></nav>
   <section class="reader" id="reader"><div class="reader-bar">
@@ -64,7 +64,7 @@ async function show(p){finishText();const doc=cache.doc,cv=document.getElementBy
   const here=lessonAt(state.g.id,state.page),box=document.getElementById('rd-here');
   if(box)box.innerHTML=here?`<span><span class="glabel">الفصل ${n(here.ch.number)}</span> ${here.it.code?`<span class="lcode">${n(here.it.code)}</span> `:''}<b>${esc(here.it.title)}</b> <span class="item-sub">صفحة ${n(pagesLabel(here.it))}</span></span><button class="btn btn-soft btn-sm" data-prepare-grade="${state.g.id}" data-ci="${here.ci}" data-ii="${here.ii}">حضّر هذا الدرس</button>`:'';
   const page=await doc.getPage(state.page),stage=document.getElementById('rd-stage');if(!stage)return;
-  const base=page.getViewport({scale:1}),fs=!!(document.fullscreenElement||document.webkitFullscreenElement),avail=stage.clientWidth-8,availH=fs?window.innerHeight-90:Infinity;
+  const base=page.getViewport({scale:1}),fs=state.focus,avail=stage.clientWidth-8,reader=document.getElementById('reader'),bars=fs?(reader?.querySelector('.reader-bar')?.offsetHeight||0)+(reader?.querySelector('.ink-bar')?.offsetHeight||0)+40:0,availH=fs&&window.innerWidth>window.innerHeight?window.innerHeight-bars:Infinity;
   let scale=Math.min(avail/base.width,availH/base.height)*state.zoom;if(!fs)scale=Math.min(avail,900)/base.width*state.zoom;
   let dpr=Math.min(window.devicePixelRatio||1,2);const area=base.width*base.height*(scale*dpr)**2,MAX=9e6;if(area>MAX)dpr*=Math.sqrt(MAX/area);const v=page.getViewport({scale:scale*dpr});
   task?.cancel?.();const off=document.createElement('canvas');off.width=Math.ceil(v.width);off.height=Math.ceil(v.height);
@@ -85,11 +85,19 @@ document.addEventListener('click',e=>{const k=e.target.closest('#ink-bar button'
   const b=e.target.closest('[data-rd]');if(!b||!document.getElementById('reader'))return;const a=b.dataset.rd;
   if(a==='next')show(state.page+1);if(a==='prev')show(state.page-1);
   if(a==='in'){state.zoom=Math.min(ZMAX,state.zoom+.25);show(state.page);}if(a==='out'){state.zoom=Math.max(ZMIN,state.zoom-.25);show(state.page);}
-  if(a==='full'){const r=document.getElementById('reader');if(document.fullscreenElement||document.webkitFullscreenElement)(document.exitFullscreen||document.webkitExitFullscreen)?.call(document);else if(r.requestFullscreen)r.requestFullscreen().catch(()=>{});else r.webkitRequestFullscreen?.();}});
+  if(a==='full')setFocus(!state.focus);});
 document.addEventListener('change',e=>{const d=e.target.dataset||{};if('textFont' in d||'textSize' in d||'textLh' in d){const T=ink.text;if('textFont' in d)T.font=e.target.value;if('textSize' in d)T.fs=Number(e.target.value);if('textLh' in d)T.lh=Number(e.target.value);savePrefs();applyTextStyle();return;}if(e.target.id==='rd-page')show(Number(e.target.value)||1);if(e.target.id==='rd-lesson'&&e.target.value){show(Number(e.target.value));e.target.value='';}});
 document.addEventListener('ink-selection',()=>{refreshOptions();const b=document.querySelector('[data-ink-pencil]');if(b)b.setAttribute('aria-pressed',String(!!ink.pencilOnly));},true);
 document.addEventListener('keydown',e=>{if(!document.getElementById('reader')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.key==='Delete'||e.key==='Backspace')&&hasSelection()){e.preventDefault();deleteSelection();refreshOptions();return;}if(e.key==='Escape'&&hasSelection()){clearSelection();refreshOptions();return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();refreshOptions();return;}if(e.key==='ArrowLeft'||e.key==='PageDown'){e.preventDefault();show(state.page+1);}if(e.key==='ArrowRight'||e.key==='PageUp'){e.preventDefault();show(state.page-1);}});
-for(const ev of ['fullscreenchange','webkitfullscreenchange'])document.addEventListener(ev,()=>{if(document.getElementById('reader'))show(state.page);});
+/* ملء الشاشة: وضع عرض ثابت يغطي الشاشة ولا يخرج بالسحب. على الحاسب فقط يُطلب أيضًا ملء الشاشة الحقيقي لإخفاء شريط المتصفح. */
+const touchDevice=()=>navigator.maxTouchPoints>0;
+function setFocus(on){state.focus=on;const r=document.getElementById('reader');if(!r)return;r.classList.toggle('focus',on);document.body.classList.toggle('reading-focus',on);
+  const b=r.querySelector('[data-rd=full]');if(b)b.innerHTML=on?`${svg('full')}خروج من ملء الشاشة`:`${svg('full')}ملء الشاشة`;
+  if(!touchDevice()){try{if(on&&!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});if(!on&&document.fullscreenElement)document.exitFullscreen?.();}catch{}}
+  show(state.page);}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&state.focus&&!touchDevice())setFocus(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.focus&&!editingText()&&!hasSelection())setFocus(false);});
+window.addEventListener('hashchange',()=>{if(state.focus&&!location.hash.startsWith('#book/')){state.focus=false;document.body.classList.remove('reading-focus');}});
 let rz;window.addEventListener('resize',()=>{if(!document.getElementById('reader'))return;clearTimeout(rz);rz=setTimeout(()=>show(state.page),200);});
 /* التكبير والتصغير بإصبعين */
 const ZMIN=.5,ZMAX=4,pinch={on:false,d0:0,z0:1,z:1,fx:.5,fy:.5,mx:0,my:0};
@@ -101,7 +109,7 @@ document.addEventListener('touchmove',e=>{if(!pinch.on||e.touches.length<2)retur
   pinch.z=Math.min(ZMAX,Math.max(ZMIN,pinch.z0*dist(e.touches)/pinch.d0));const [mx,my]=mid(e.touches);wrap.style.transform=`translate(${mx-pinch.mx}px,${my-pinch.my}px) scale(${pinch.z/pinch.z0})`;pinch.cx=mx;pinch.cy=my;},{passive:false,capture:true});
 async function endPinch(){if(!pinch.on)return;pinch.on=false;const wrap=document.getElementById('rd-wrap'),stage=document.getElementById('rd-stage');const mx=pinch.cx??pinch.mx,my=pinch.cy??pinch.my;
   state.zoom=Math.round(pinch.z*100)/100;await show(state.page);if(wrap){wrap.style.transform='';wrap.style.transformOrigin='';}
-  const r=document.getElementById('rd-wrap')?.getBoundingClientRect();if(r&&stage){stage.scrollBy(r.left+pinch.fx*r.width-mx,0);window.scrollBy(0,r.top+pinch.fy*r.height-my);}
+  const r=document.getElementById('rd-wrap')?.getBoundingClientRect();if(r&&stage){stage.scrollBy(r.left+pinch.fx*r.width-mx,0);(state.focus?document.getElementById('reader'):window).scrollBy(0,r.top+pinch.fy*r.height-my);}
   setTimeout(()=>{ink.pinching=false;},50);pinch.cx=pinch.cy=undefined;}
 document.addEventListener('touchend',e=>{if(pinch.on&&e.touches.length<2)endPinch();},{capture:true});
 document.addEventListener('touchcancel',()=>{if(pinch.on)endPinch();},{capture:true});

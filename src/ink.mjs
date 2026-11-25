@@ -138,7 +138,7 @@ function bind(cv){if(cv._bound)return;cv._bound=true;
     ink.live={t:ink.tool==='hl'?'hl':'pen',c:ink.tool==='hl'?ink.hl:ink.color,w:ink.size,p:[p]};drawOverlay();});
   cv.addEventListener('pointermove',e=>{
     if(e.pointerType==='touch'&&ink.pinching)return;
-    if(e.pointerType==='touch'&&pan.id===e.pointerId){const stage=cv.closest('.reader-stage');stage?.scrollBy(pan.x-e.clientX,0);window.scrollBy(0,pan.y-e.clientY);pan.x=e.clientX;pan.y=e.clientY;return;}
+    if(e.pointerType==='touch'&&pan.id===e.pointerId){const stage=cv.closest('.reader-stage');stage?.scrollBy(pan.x-e.clientX,0);const box=cv.closest('.reader.focus');if(box)box.scrollBy(0,pan.y-e.clientY);else window.scrollBy(0,pan.y-e.clientY);pan.x=e.clientX;pan.y=e.clientY;return;}
     if(e.pointerType==='touch'&&ink.pencilOnly)return;
     if(ink.tool==='laser'){laser.hover=pt(e);if(ink.laser==='line'&&(laser.down||e.pointerType==='mouse')){for(const ev of (e.getCoalescedEvents?.()||[e]))laser.pts.push([...pt(ev),performance.now()]);}drawOverlay();return;}
     if(ink.tool==='select'){const p=pt(e);if(lasso.drag){const dx=p[0]-lasso.drag.start[0],dy=p[1]-lasso.drag.start[1];lasso.drag.moved=true;const s=new Set(ink.sel);ink.strokes=lasso.drag.orig.map((st,i)=>s.has(i)?translate(st,dx,dy):st);redraw();}else if(lasso.rect){lasso.rect[2]=p[0];lasso.rect[3]=p[1];drawOverlay();}else if(lasso.pts){lasso.pts.push(p);drawOverlay();}return;}
