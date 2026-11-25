@@ -2,3 +2,4 @@ export function openSchoolDB(){return new Promise((resolve,reject)=>{const r=ind
 export async function record(store,mode,operation){const db=await openSchoolDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(store,mode),r=operation(tx.objectStore(store));tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(Error('تعذر حفظ الملف محليًا.'));});}finally{db.close();}}
 export const getLessons=()=>record('lessons','readonly',s=>s.getAll());
 export const putBook=b=>record('books','readwrite',s=>s.put(b));
+export const hasBook=id=>id?record('books','readonly',s=>s.getKey(id)).then(Boolean).catch(()=>false):Promise.resolve(false);
