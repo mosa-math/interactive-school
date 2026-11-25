@@ -260,3 +260,7 @@ body>header.topbar{display:block}
 .reader-bar,.ink-bar{touch-action:manipulation}
 .ink-text-edit{-webkit-user-select:text;user-select:text}
 .reader:-webkit-full-screen{padding:12px;overflow:auto;background:var(--bg)}
+
+/* التكبير بإصبعين داخل صفحة الكتاب بدل تكبير المتصفح */
+.reader-stage{touch-action:pan-x pan-y}
+.page-wrap{will-change:transform}

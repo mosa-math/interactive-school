@@ -113,6 +113,7 @@ export function finishText(){const ed=ink.editing;if(!ed)return;setTimeout(()=>i
   const idx=ink.strokes.indexOf(ed.item);if(!s){if(idx>=0){ink.strokes.splice(idx,1);commit(ed.prev);}}else{const it={...ed.item,s:s.slice(0,4000)};if(idx>=0)ink.strokes[idx]=it;else ink.strokes.push(it);commit(ed.prev);}redraw();}
 export function applyTextStyle(){const ed=ink.editing,T=ink.text;if(!ed)return;Object.assign(ed.item,{c:T.c,fs:T.fs/900,font:T.font,b:T.b,i:T.i,align:T.align,lh:T.lh});const ta=ed.ta,Wc=ink.canvas.getBoundingClientRect().width;Object.assign(ta.style,{fontSize:ed.item.fs*Wc+'px',lineHeight:String(T.lh),color:T.c,fontFamily:fontOf(ed.item),fontWeight:T.b?'700':'400',fontStyle:T.i?'italic':'normal',textAlign:T.align});ta.dispatchEvent(new Event('input'));ta.focus();}
 export const editingText=()=>!!ink.editing;
+export function cancelLive(){ink.live=null;drawOverlay();}
 
 /* المؤشر واللمس */
 function bind(cv){if(cv._bound)return;cv._bound=true;
@@ -136,6 +137,7 @@ function bind(cv){if(cv._bound)return;cv._bound=true;
     if(ink.tool==='shape'){ink.live={t:'shape',k:ink.shape,x0:p[0],y0:p[1],x1:p[0],y1:p[1],c:ink.color,w:ink.size,fill:ink.fill};drawOverlay();return;}
     ink.live={t:ink.tool==='hl'?'hl':'pen',c:ink.tool==='hl'?ink.hl:ink.color,w:ink.size,p:[p]};drawOverlay();});
   cv.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch'&&ink.pinching)return;
     if(e.pointerType==='touch'&&pan.id===e.pointerId){const stage=cv.closest('.reader-stage');stage?.scrollBy(pan.x-e.clientX,0);window.scrollBy(0,pan.y-e.clientY);pan.x=e.clientX;pan.y=e.clientY;return;}
     if(e.pointerType==='touch'&&ink.pencilOnly)return;
     if(ink.tool==='laser'){laser.hover=pt(e);if(ink.laser==='line'&&(laser.down||e.pointerType==='mouse')){for(const ev of (e.getCoalescedEvents?.()||[e]))laser.pts.push([...pt(ev),performance.now()]);}drawOverlay();return;}
@@ -144,6 +146,7 @@ function bind(cv){if(cv._bound)return;cv._bound=true;
     if(ink.live.t==='shape'){let [x,y]=pt(e);if(e.shiftKey&&!OPEN.includes(ink.live.k)){const ar=cv.height/cv.width,d=Math.max(Math.abs(x-ink.live.x0),Math.abs(y-ink.live.y0)*ar);x=ink.live.x0+Math.sign(x-ink.live.x0||1)*d;y=ink.live.y0+Math.sign(y-ink.live.y0||1)*d/ar;}ink.live.x1=x;ink.live.y1=y;drawOverlay();return;}
     const evs=e.getCoalescedEvents?.()||[e];for(const ev of evs){const p=pt(ev),l=ink.live.p[ink.live.p.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>.0012)ink.live.p.push(p);}scheduleOverlay();});
   const end=e=>{
+    if(e?.pointerType==='touch'&&ink.pinching){pan.id=null;return;}
     if(e?.pointerType==='touch'&&(pan.id===e.pointerId||ink.pencilOnly)){if(pan.id===e?.pointerId)pan.id=null;return;}
     if(ink.tool==='laser'){laser.down=false;drawOverlay();return;}
     if(ink.tool==='select'){if(lasso.drag){if(lasso.drag.moved){commit(lasso.drag.orig);ink.strokes=ink.strokes.map(tidy);persist();}lasso.drag=null;redraw();}
