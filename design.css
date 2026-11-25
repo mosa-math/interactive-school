@@ -229,7 +229,7 @@ body>header.topbar{display:block}
 .page-wrap[hidden]{display:none}
 .page-wrap canvas{display:block}
 .page-wrap .ink{position:absolute;inset:0;background:transparent!important;box-shadow:none!important;touch-action:none;border-radius:6px}
-.reader-stage.drawing{overflow:hidden}
+.reader-stage.drawing{overflow:auto;overscroll-behavior:contain}
 .reader:fullscreen .ink-bar{position:sticky;top:0;z-index:6}
 @media(max-width:640px){.ink-tool span{display:none}.ink-group{padding-inline-end:6px}}
 .page-wrap .ink.over{pointer-events:none!important}
@@ -253,3 +253,10 @@ body>header.topbar{display:block}
 .ink-text-edit{position:absolute;z-index:4;margin:0;padding:2px 4px;border:1.5px dashed #0F6E64;border-radius:4px;background:rgba(255,255,255,.55);resize:none;overflow:hidden;outline:none;box-sizing:border-box;min-height:0}
 @media(max-width:640px){.ink-sub{gap:6px}.ink-seg .ink-tool span{display:inline}}
 .ink-row .ink-group{flex-wrap:wrap}
+
+/* الآيباد: منع التحديد والقائمة المنبثقة والتكبير بالنقر المزدوج على الصفحة */
+.reader-stage,.page-wrap,.page-wrap canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.page-wrap .ink{touch-action:none}
+.reader-bar,.ink-bar{touch-action:manipulation}
+.ink-text-edit{-webkit-user-select:text;user-select:text}
+.reader:-webkit-full-screen{padding:12px;overflow:auto;background:var(--bg)}
