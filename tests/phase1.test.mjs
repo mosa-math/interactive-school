@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {validQuestion,mergeQuestions,makePaper} from '../features/question-bank.mjs';
+import {validPlan,plansHTML} from '../features/preparation.mjs';
+const q={id:'q1',grade:'السادس الابتدائي',lessonId:'l1',lesson:'الكسور',skill:'جمع الكسور',prompt:'ما ناتج نصف وربع؟',options:['٣/٤','١/٤','١','٢'],answer:'٣/٤',points:2,page:10,book:'رياضيات السادس'};
+test('bank preserves classification and deduplicates exact source questions',()=>{assert.ok(validQuestion(q));assert.equal(mergeQuestions([q],[{...q,id:'another'}]).length,1);assert.equal(mergeQuestions([q],[{...q,id:'q2',grade:'الرابع الابتدائي'}]).length,2);assert.ok(!validQuestion({...q,page:0}));assert.ok(!validQuestion({...q,options:['x']}));});
+test('bank outputs separate test and worksheet and blocks crossed grades',()=>{const t=makePaper([q],'test'),w=makePaper([q],'worksheet');assert.equal(t.type,'test');assert.equal(w.type,'worksheet');assert.equal(t.questions[0].page,10);assert.throws(()=>makePaper([q,{...q,grade:'الرابع الابتدائي'}],'test'));assert.throws(()=>makePaper([],'test'));});
+test('plans validate supported terms and escape print content',()=>{const p={id:'p',kind:'weekly',grade:'السادس الابتدائي',term:'الفصل الثاني',week:'١',lesson:'<script>alert(1)</script>',pages:'10-12',goals:'جمع الكسور',notes:''};assert.ok(validPlan(p));assert.ok(!validPlan({...p,term:'الفصل الثالث'}));const html=plansHTML([p]);assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));});
+import {validCue} from '../features/interactive-video.mjs';
+test('interactive video validates cue times options and answers',()=>{const c={at:12,question:'اختر الناتج',options:['أ','ب','ج','د'],correct:2};assert.ok(validCue(c));assert.ok(!validCue({...c,at:-1}));assert.ok(!validCue({...c,correct:4}));assert.ok(!validCue({...c,options:['أ']}));});
