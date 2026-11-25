@@ -1,7 +1,7 @@
 import {downloadSchoolBook} from './features/book-library.mjs?v=phase1-books2';
 import {schoolBooks} from './books/catalog.mjs?v=phase1-books';
 import {videoView,bindVideo,videoAction,videoChange} from './features/interactive-video.mjs?v=phase1-books2';
-import {plansView,planAction} from './features/preparation.mjs?v=phase1-books2';
+import {plansView,planAction} from './features/preparation.mjs?v=curriculum1448';
 import {bankView,bankAction,saveLessonQuestions,selectBank,importBank,bankGrade,setBankGrade} from './features/question-bank.mjs?v=phase1-books2';
 import {assessmentView,assessmentAction,validAssessment} from './assessment.mjs?v=phase1-books2';
 import {digit as n,escape as esc,kinds,validOutline,validLesson,calculationCheck,parsePages,safeImage,lessonQuestions} from './lesson-core.mjs';

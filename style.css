@@ -9,3 +9,4 @@ body{font-size:16px}.brand{text-decoration:none;color:#fff}.header-note{font-siz
 @media(max-width:720px){.mobile-navigation{flex-wrap:nowrap}}
 
 .official-book img{display:block;max-height:230px;max-width:100%;margin:0 auto 16px;border:1px solid #d4e2df;border-radius:8px}.official-book a{display:inline-block;padding:10px;color:#075e58}
+.plan-row h3,.plan-row p{white-space:pre-line}.plan-meta{padding:18px;border:1px solid #d2dfdb;border-radius:12px;margin-top:18px}.plan-meta li{line-height:1.9}.plan-meta summary{font-weight:700;color:#815019}
