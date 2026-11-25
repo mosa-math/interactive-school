@@ -274,3 +274,12 @@ body.reading-focus{overflow:hidden;overscroll-behavior:none}
 .reader.focus .reader-bar{position:static}
 .reader.focus .ink-bar{position:sticky;top:0;z-index:6;box-shadow:0 4px 14px #17212d1a}
 .reader.focus>*{flex-shrink:0}
+
+/* ملء الشاشة الحقيقي (يخفي شريط Safari) مع منع سحب الشاشة للخروج */
+.reader.focus,.reader.focus *{touch-action:none}
+.reader.focus select,.reader.focus textarea{touch-action:auto}
+.reader:fullscreen,.reader:-webkit-full-screen{width:100%;height:100%;overflow:auto;background:var(--bg)}
+.reader.focus #rd-lesson,.reader.focus .ink-sub .ink-hint{display:none}
+.reader.focus .reader-bar{padding:6px 10px}
+.reader.focus .reader-stage{justify-content:center}
+.reader.focus .ink-sub:has(>.ink-hint:only-child){display:none}

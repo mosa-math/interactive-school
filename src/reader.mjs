@@ -64,7 +64,7 @@ async function show(p){finishText();const doc=cache.doc,cv=document.getElementBy
   const here=lessonAt(state.g.id,state.page),box=document.getElementById('rd-here');
   if(box)box.innerHTML=here?`<span><span class="glabel">الفصل ${n(here.ch.number)}</span> ${here.it.code?`<span class="lcode">${n(here.it.code)}</span> `:''}<b>${esc(here.it.title)}</b> <span class="item-sub">صفحة ${n(pagesLabel(here.it))}</span></span><button class="btn btn-soft btn-sm" data-prepare-grade="${state.g.id}" data-ci="${here.ci}" data-ii="${here.ii}">حضّر هذا الدرس</button>`:'';
   const page=await doc.getPage(state.page),stage=document.getElementById('rd-stage');if(!stage)return;
-  const base=page.getViewport({scale:1}),fs=state.focus,avail=stage.clientWidth-8,reader=document.getElementById('reader'),bars=fs?(reader?.querySelector('.reader-bar')?.offsetHeight||0)+(reader?.querySelector('.ink-bar')?.offsetHeight||0)+40:0,availH=fs&&window.innerWidth>window.innerHeight?window.innerHeight-bars:Infinity;
+  const base=page.getViewport({scale:1}),fs=state.focus,avail=stage.clientWidth-8,reader=document.getElementById('reader'),bars=fs?(reader?.querySelector('.reader-bar')?.offsetHeight||0)+(reader?.querySelector('.ink-bar')?.offsetHeight||0)+28:0,availH=fs?Math.max(200,(reader?.clientHeight||window.innerHeight)-bars):Infinity;
   let scale=Math.min(avail/base.width,availH/base.height)*state.zoom;if(!fs)scale=Math.min(avail,900)/base.width*state.zoom;
   let dpr=Math.min(window.devicePixelRatio||1,2);const area=base.width*base.height*(scale*dpr)**2,MAX=9e6;if(area>MAX)dpr*=Math.sqrt(MAX/area);const v=page.getViewport({scale:scale*dpr});
   task?.cancel?.();const off=document.createElement('canvas');off.width=Math.ceil(v.width);off.height=Math.ceil(v.height);
@@ -91,12 +91,23 @@ document.addEventListener('ink-selection',()=>{refreshOptions();const b=document
 document.addEventListener('keydown',e=>{if(!document.getElementById('reader')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.key==='Delete'||e.key==='Backspace')&&hasSelection()){e.preventDefault();deleteSelection();refreshOptions();return;}if(e.key==='Escape'&&hasSelection()){clearSelection();refreshOptions();return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();refreshOptions();return;}if(e.key==='ArrowLeft'||e.key==='PageDown'){e.preventDefault();show(state.page+1);}if(e.key==='ArrowRight'||e.key==='PageUp'){e.preventDefault();show(state.page-1);}});
 /* ملء الشاشة: وضع عرض ثابت يغطي الشاشة ولا يخرج بالسحب. على الحاسب فقط يُطلب أيضًا ملء الشاشة الحقيقي لإخفاء شريط المتصفح. */
 const touchDevice=()=>navigator.maxTouchPoints>0;
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+async function enterNative(el){try{if(el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'});else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}catch{}}
+function exitNative(){try{if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});else document.webkitExitFullscreen?.();}catch{}}
 function setFocus(on){state.focus=on;const r=document.getElementById('reader');if(!r)return;r.classList.toggle('focus',on);document.body.classList.toggle('reading-focus',on);
   const b=r.querySelector('[data-rd=full]');if(b)b.innerHTML=on?`${svg('full')}خروج من ملء الشاشة`:`${svg('full')}ملء الشاشة`;
-  if(!touchDevice()){try{if(on&&!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});if(!on&&document.fullscreenElement)document.exitFullscreen?.();}catch{}}
-  show(state.page);}
-document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&state.focus&&!touchDevice())setFocus(false);});
+  if(on){state.zoomBefore=state.zoom;state.zoom=1;if(!fsEl())enterNative(r);}else{if(state.zoomBefore)state.zoom=state.zoomBefore;if(fsEl())exitNative();}
+  setTimeout(()=>show(state.page),on?250:60);}
+for(const ev of ['fullscreenchange','webkitfullscreenchange'])document.addEventListener(ev,()=>{if(!fsEl()&&state.focus)setFocus(false);else if(state.focus)setTimeout(()=>show(state.page),120);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.focus&&!editingText()&&!hasSelection())setFocus(false);});
+/* داخل ملء الشاشة: اللمس يحرّك الصفحة بإصبع واحد بدل أن يسحب Safari الشاشة ويخرج منها، والسحب أفقيًا يقلب الصفحة */
+const fpan={on:false,x:0,y:0,x0:0,y0:0,moved:false};
+document.addEventListener('touchstart',e=>{if(!state.focus||e.touches.length!==1||!e.target.closest?.('#reader'))return;if(e.target.closest('button,select,input,textarea,a,label'))return;if(ink.tool!=='view'&&e.target.closest('#rd-ink'))return;
+  const t=e.touches[0];Object.assign(fpan,{on:true,x:t.clientX,y:t.clientY,x0:t.clientX,y0:t.clientY,moved:false});},{passive:true,capture:true});
+document.addEventListener('touchmove',e=>{if(!state.focus)return;if(e.target.closest?.('#reader')&&!e.target.closest('select,textarea'))e.preventDefault();if(!fpan.on||e.touches.length!==1||ink.pinching)return;
+  const t=e.touches[0],r=document.getElementById('reader'),st=document.getElementById('rd-stage');st?.scrollBy(fpan.x-t.clientX,0);r?.scrollBy(0,fpan.y-t.clientY);fpan.x=t.clientX;fpan.y=t.clientY;fpan.moved=true;},{passive:false,capture:true});
+document.addEventListener('touchend',e=>{if(!fpan.on)return;fpan.on=false;const t=e.changedTouches[0],dx=t.clientX-fpan.x0,dy=t.clientY-fpan.y0;
+  if(state.zoom<=1&&ink.tool==='view'&&!ink.pinching&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)show(state.page+(dx>0?1:-1));},{capture:true});
 window.addEventListener('hashchange',()=>{if(state.focus&&!location.hash.startsWith('#book/')){state.focus=false;document.body.classList.remove('reading-focus');}});
 let rz;window.addEventListener('resize',()=>{if(!document.getElementById('reader'))return;clearTimeout(rz);rz=setTimeout(()=>show(state.page),200);});
 /* التكبير والتصغير بإصبعين */
@@ -113,5 +124,5 @@ async function endPinch(){if(!pinch.on)return;pinch.on=false;const wrap=document
   setTimeout(()=>{ink.pinching=false;},50);pinch.cx=pinch.cy=undefined;}
 document.addEventListener('touchend',e=>{if(pinch.on&&e.touches.length<2)endPinch();},{capture:true});
 document.addEventListener('touchcancel',()=>{if(pinch.on)endPinch();},{capture:true});
-let sx=null;document.addEventListener('touchstart',e=>{if(ink.tool==='view'&&e.target.closest?.('#rd-stage')&&e.touches.length===1&&state.zoom<=1)sx=e.touches[0].clientX;},{passive:true});
+let sx=null;document.addEventListener('touchstart',e=>{if(!state.focus&&ink.tool==='view'&&e.target.closest?.('#rd-stage')&&e.touches.length===1&&state.zoom<=1)sx=e.touches[0].clientX;},{passive:true});
 document.addEventListener('touchend',e=>{if(sx===null||pinch.on||ink.pinching){sx=null;return;}const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>60)show(state.page+(dx>0?1:-1));},{passive:true});
