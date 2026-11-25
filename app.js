@@ -29,3 +29,5 @@ window.addEventListener('hashchange',()=>render(location.hash.slice(1)||'home'))
 window.lessonBridge={apply(l){slides=l.slides.map(s=>({title:s.title,body:[s.body,...s.steps,s.question,...s.options].filter(Boolean).join('\n')}));pages=l.slides.map(s=>({title:s.title,body:[s.body,...s.steps].join('\n')}));questions=l.slides.filter(s=>s.question&&s.options.length===4).map(s=>({q:s.question,a:s.options,correct:s.correct}));si=pi=qi=points=0;answered=false;scores={'أ':0,'ب':0};save();}};
 
 window.useBankQuestions=rows=>{questions=rows;qi=points=0;answered=false;runSaved=false;scores={'أ':0,'ب':0};save();render('challenge')};
+
+window.navigatePortal=render;
