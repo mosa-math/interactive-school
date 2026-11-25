@@ -2,7 +2,7 @@
 import {record} from './data/database.mjs';
 import {curriculum,pagesLabel} from './data/curriculum.mjs';
 import {escape as esc,digit as n} from '../lesson-core.mjs';
-import {ink,attach,redraw,undo,clearPage,updateCursor,COLORS,HIGHLIGHTS,SIZES} from './ink.mjs';
+import {ink,attach,redraw,undo,clearPage,updateCursor,COLORS,HIGHLIGHTS,SIZES,hasSelection,deleteSelection,recolorSelection,duplicateSelection,clearSelection} from './ink.mjs';
 
 const cache={id:'',doc:null,loading:null};
 let task=null,state={g:null,page:1,zoom:1,total:0};
@@ -11,13 +11,15 @@ async function loadPDF(bytes){const lib=await import('../vendor/pdf.mjs');lib.Gl
 async function openDoc(bookId){if(cache.id===bookId&&cache.doc)return cache.doc;if(cache.id===bookId&&cache.loading)return cache.loading;
   cache.id=bookId;cache.doc=null;cache.loading=(async()=>{const book=await record('books','readonly',s=>s.get(bookId));if(!book?.blob)return null;const doc=await loadPDF(await book.blob.arrayBuffer());cache.doc=doc;return doc;})().catch(e=>{cache.id='';throw e}).finally(()=>{cache.loading=null});return cache.loading;}
 
-const ico={hand:'<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8.5a6.5 6.5 0 0 1-13 0V12a1.5 1.5 0 0 1 3 0v1"/>',pen:'<path d="m4 20 4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',hl:'<path d="m9 11-5 5v4h4l5-5"/><path d="m14 6 4 4-5 5-4-4z"/><path d="M3 21h7"/>',erase:'<path d="m7 21-4-4L14 6l6 6-9 9z"/><path d="M7 21h13M9 11l6 6"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',next:'<path d="m15 6-6 6 6 6"/>',prev:'<path d="m9 6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',full:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'};
+const ico={select:'<path d="M5 4c6-2 14 0 14 5s-6 6-9 5-5 2-3 4"/><path d="M7 18l-2 3"/><circle cx="7" cy="18" r="1.6"/>',laser:'<circle cx="12" cy="12" r="3.2" fill="#EF2323" stroke="none"/><circle cx="12" cy="12" r="7" stroke-opacity=".45"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',hand:'<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8.5a6.5 6.5 0 0 1-13 0V12a1.5 1.5 0 0 1 3 0v1"/>',pen:'<path d="m4 20 4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',hl:'<path d="m9 11-5 5v4h4l5-5"/><path d="m14 6 4 4-5 5-4-4z"/><path d="M3 21h7"/>',erase:'<path d="m7 21-4-4L14 6l6 6-9 9z"/><path d="M7 21h13M9 11l6 6"/>',undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',next:'<path d="m15 6-6 6 6 6"/>',prev:'<path d="m9 6 6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',full:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'};
 const svg=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ico[k]}</svg>`;
-function inkBar(){const t=ink.tool,tools=[['view','hand','تصفح'],['pen','pen','قلم'],['hl','hl','تظليل'],['erase','erase','ممحاة']];
+function inkBar(){const t=ink.tool,tools=[['view','hand','تصفح'],['pen','pen','قلم'],['hl','hl','تظليل'],['erase','erase','ممحاة'],['select','select','تحديد'],['laser','laser','مؤشر الشرح']];
   const sw=(list,cur,attr)=>list.map(([c,name])=>`<button class="ink-sw" style="background:${c}" data-${attr}="${c}" aria-label="${name}" aria-pressed="${c===cur}"></button>`).join('');
   return `<div class="ink-group">${tools.map(([k,i,label])=>`<button class="ink-tool" data-ink-tool="${k}" aria-pressed="${t===k}">${svg(i)}<span>${label}</span></button>`).join('')}</div>
   ${t==='pen'?`<div class="ink-group">${sw(COLORS,ink.color,'ink-color')}</div><div class="ink-group">${SIZES.map(([label,w])=>`<button class="ink-size" data-ink-size="${w}" aria-pressed="${w===ink.size}" aria-label="${label}"><i style="width:${Math.round(w*1600)}px;height:${Math.round(w*1600)}px"></i></button>`).join('')}</div>`:''}
   ${t==='hl'?`<div class="ink-group">${sw(HIGHLIGHTS,ink.hl,'ink-hl')}</div>`:''}
+  ${t==='select'?(hasSelection()?`<div class="ink-group">${COLORS.map(([c,name])=>`<button class="ink-sw" style="background:${c}" data-sel-color="${c}" aria-label="تلوين المحدد بالـ${name}"></button>`).join('')}</div><div class="ink-group"><button class="ink-tool" data-sel-copy>${svg('copy')}<span>نسخ</span></button><button class="ink-tool" data-sel-delete>${svg('trash')}<span>حذف المحدد</span></button><button class="ink-tool" data-sel-none><span>إلغاء التحديد</span></button></div>`:`<span class="ink-hint">ارسم دائرة حول ما تريد تحديده، ثم اسحبه لتحريكه.</span>`):''}
+  ${t==='laser'?`<span class="ink-hint">حرّك القلم أو الإصبع على الصفحة، ويختفي الأثر وحده.</span>`:''}
   <div class="ink-group"><button class="ink-tool" data-ink-undo>${svg('undo')}<span>تراجع</span></button><button class="ink-tool" data-ink-clear>${svg('trash')}<span>مسح الصفحة</span></button></div>`;}
 function refreshBar(){const bar=document.getElementById('ink-bar');if(bar)bar.innerHTML=inkBar();updateCursor();document.getElementById('rd-stage')?.classList.toggle('drawing',ink.tool!=='view');}
 function lessonAt(gid,page){const c=curriculum[gid];if(!c)return null;for(const [ci,ch] of c.chapters.entries())for(const [ii,it] of ch.items.entries())if(page>=it.from&&page<=it.to)return {it,ci,ii,ch};return null;}
@@ -33,7 +35,7 @@ export async function renderReader(root,g,startPage){
   </div>
   <div class="ink-bar" id="ink-bar" role="toolbar" aria-label="أدوات الكتابة على الكتاب">${inkBar()}</div>
   <div class="reader-lesson" id="rd-here"></div>
-  <div class="reader-stage" id="rd-stage"><p class="mx-muted" id="rd-msg">جارٍ فتح الكتاب…</p><div class="page-wrap" id="rd-wrap" hidden><canvas id="rd-canvas"></canvas><canvas id="rd-ink" class="ink" aria-label="طبقة الكتابة على الصفحة"></canvas></div></div></section>`;
+  <div class="reader-stage" id="rd-stage"><p class="mx-muted" id="rd-msg">جارٍ فتح الكتاب…</p><div class="page-wrap" id="rd-wrap" hidden><canvas id="rd-canvas"></canvas><canvas id="rd-ink" class="ink" aria-label="طبقة الكتابة على الصفحة"></canvas><canvas id="rd-over" class="ink over" aria-hidden="true"></canvas></div></div></section>`;
   try{const doc=g.bookId?await openDoc(g.bookId):null;
     if(!doc){document.getElementById('rd-stage').innerHTML=`<div class="mx-empty"><p>ملف الكتاب غير مرفق على هذا الجهاز بعد. أرفقه مرة واحدة، فيُفتح هنا في كل مرة من هذا المتصفح.</p><label class="btn btn-primary" for="grade-pdf" style="cursor:pointer">إرفاق ملف الكتاب (PDF)</label><input id="grade-pdf" data-owner="${g.id}" data-reader="1" type="file" accept="application/pdf,.pdf" hidden><p id="grade-status" role="status"></p></div>`;return;}
     state.total=doc.numPages;document.getElementById('rd-total').textContent=`من ${n(doc.numPages)}`;document.getElementById('rd-page').max=doc.numPages;
@@ -50,20 +52,21 @@ async function show(p){const doc=cache.doc,cv=document.getElementById('rd-canvas
   const dpr=Math.min(window.devicePixelRatio||1,2),v=page.getViewport({scale:scale*dpr});
   task?.cancel?.();const off=document.createElement('canvas');off.width=Math.ceil(v.width);off.height=Math.ceil(v.height);
   task=page.render({canvasContext:off.getContext('2d'),viewport:v});try{await task.promise}catch(e){if(e?.name==='RenderingCancelledException')return;throw e}
-  cv.width=off.width;cv.height=off.height;cv.getContext('2d').drawImage(off,0,0);cv.style.width=(v.width/dpr)+'px';cv.style.height=(v.height/dpr)+'px';const ic=document.getElementById('rd-ink');ic.width=off.width;ic.height=off.height;ic.style.width=cv.style.width;ic.style.height=cv.style.height;document.getElementById('rd-wrap').hidden=false;document.getElementById('rd-msg')?.remove();await attach(ic,`${state.g.bookId}:${state.page}`);
+  cv.width=off.width;cv.height=off.height;cv.getContext('2d').drawImage(off,0,0);cv.style.width=(v.width/dpr)+'px';cv.style.height=(v.height/dpr)+'px';const ic=document.getElementById('rd-ink');ic.width=off.width;ic.height=off.height;ic.style.width=cv.style.width;ic.style.height=cv.style.height;document.getElementById('rd-wrap').hidden=false;document.getElementById('rd-msg')?.remove();const oc=document.getElementById('rd-over');oc.style.width=cv.style.width;oc.style.height=cv.style.height;await attach(ic,`${state.g.bookId}:${state.page}`,oc);
   if(state.page<doc.numPages)doc.getPage(state.page+1).catch(()=>{});}
 
 export function forgetBook(id){if(cache.id===id){cache.id='';cache.doc=null;}}
-document.addEventListener('click',e=>{const k=e.target.closest('[data-ink-tool],[data-ink-color],[data-ink-hl],[data-ink-size],[data-ink-undo],[data-ink-clear]');if(k&&document.getElementById('reader')){const d=k.dataset;
+document.addEventListener('click',e=>{const k=e.target.closest('[data-ink-tool],[data-ink-color],[data-ink-hl],[data-ink-size],[data-ink-undo],[data-ink-clear],[data-sel-color],[data-sel-copy],[data-sel-delete],[data-sel-none]');if(k&&document.getElementById('reader')){const d=k.dataset;
   if(d.inkTool)ink.tool=d.inkTool;if(d.inkColor){ink.color=d.inkColor;}if(d.inkHl)ink.hl=d.inkHl;if(d.inkSize)ink.size=Number(d.inkSize);
-  if(k.hasAttribute('data-ink-undo'))undo();if(k.hasAttribute('data-ink-clear')&&ink.strokes.length&&confirm('مسح كل ما كتبته على هذه الصفحة؟'))clearPage();
+  if(d.selColor)recolorSelection(d.selColor);if(k.hasAttribute('data-sel-copy'))duplicateSelection();if(k.hasAttribute('data-sel-delete'))deleteSelection();if(k.hasAttribute('data-sel-none'))clearSelection();if(k.hasAttribute('data-ink-undo'))undo();if(k.hasAttribute('data-ink-clear')&&ink.strokes.length&&confirm('مسح كل ما كتبته على هذه الصفحة؟'))clearPage();
   refreshBar();return;}
   const b=e.target.closest('[data-rd]');if(!b||!document.getElementById('reader'))return;const a=b.dataset.rd;
   if(a==='next')show(state.page+1);if(a==='prev')show(state.page-1);
   if(a==='in'){state.zoom=Math.min(3,state.zoom+.25);show(state.page);}if(a==='out'){state.zoom=Math.max(.5,state.zoom-.25);show(state.page);}
   if(a==='full'){const r=document.getElementById('reader');if(document.fullscreenElement)document.exitFullscreen?.();else r.requestFullscreen?.().catch(()=>{});}});
 document.addEventListener('change',e=>{if(e.target.id==='rd-page')show(Number(e.target.value)||1);if(e.target.id==='rd-lesson'&&e.target.value){show(Number(e.target.value));e.target.value='';}});
-document.addEventListener('keydown',e=>{if(!document.getElementById('reader')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}if(e.key==='ArrowLeft'||e.key==='PageDown'){e.preventDefault();show(state.page+1);}if(e.key==='ArrowRight'||e.key==='PageUp'){e.preventDefault();show(state.page-1);}});
+document.addEventListener('ink-selection',()=>refreshBar(),true);
+document.addEventListener('keydown',e=>{if(!document.getElementById('reader')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.key==='Delete'||e.key==='Backspace')&&hasSelection()){e.preventDefault();deleteSelection();refreshBar();return;}if(e.key==='Escape'&&hasSelection()){clearSelection();refreshBar();return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();refreshBar();return;}if(e.key==='ArrowLeft'||e.key==='PageDown'){e.preventDefault();show(state.page+1);}if(e.key==='ArrowRight'||e.key==='PageUp'){e.preventDefault();show(state.page-1);}});
 document.addEventListener('fullscreenchange',()=>{if(document.getElementById('reader'))show(state.page);});
 let rz;window.addEventListener('resize',()=>{if(!document.getElementById('reader'))return;clearTimeout(rz);rz=setTimeout(()=>show(state.page),200);});
 let sx=null;document.addEventListener('touchstart',e=>{if(ink.tool==='view'&&e.target.closest?.('#rd-stage')&&e.touches.length===1&&state.zoom<=1)sx=e.touches[0].clientX;},{passive:true});

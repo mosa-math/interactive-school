@@ -232,3 +232,5 @@ body>header.topbar{display:block}
 .reader-stage.drawing{overflow:hidden}
 .reader:fullscreen .ink-bar{position:sticky;top:0;z-index:6}
 @media(max-width:640px){.ink-tool span{display:none}.ink-group{padding-inline-end:6px}}
+.page-wrap .ink.over{pointer-events:none!important}
+.ink-hint{font-size:14px;color:var(--muted)}
