@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+const {parseNames,getRoster,saveRoster,makeGroups}=await import('../src/data/roster.mjs');
+test('pasted names are cleaned, numbered prefixes removed and duplicates dropped',()=>{assert.deepEqual(parseNames('1. محمد أحمد\n2) عبدالله  سعد\n\nمحمد أحمد\nخالد\tفهد'),['محمد أحمد','عبدالله سعد','خالد','فهد']);assert.equal(parseNames(Array.from({length:90},(_,i)=>'طالب '+i).join('\n')).length,60);});
+test('rosters stay per section on this device and can be cleared',()=>{saveRoster('g4-2',['أ','ب']);assert.deepEqual(getRoster('g4-2'),['أ','ب']);assert.deepEqual(getRoster('g4-1'),[]);saveRoster('g4-2',[]);assert.deepEqual(getRoster('g4-2'),[]);assert.throws(()=>saveRoster('bad id"',['x']));});
+test('groups use every student once and stay balanced',()=>{const names=Array.from({length:13},(_,i)=>'ط'+i),gs=makeGroups(names,4,()=>0.5);assert.equal(gs.length,4);assert.deepEqual(gs.flat().sort(),[...names].sort());assert.ok(Math.max(...gs.map(g=>g.length))-Math.min(...gs.map(g=>g.length))<=1);assert.equal(makeGroups(['أ'],4).length,1);});
