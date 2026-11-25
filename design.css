@@ -212,3 +212,23 @@ body>header.topbar{display:block}
 .reader-stage canvas{background:#fff;border-radius:6px;box-shadow:0 6px 24px #17212d26;max-width:none}
 .reader:fullscreen .reader-lesson{display:none}
 @media(max-width:640px){.reader-bar{position:static}#rd-lesson{order:3;width:100%;max-width:none}}
+/* الكتابة على الكتاب */
+.ink-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:8px 10px}
+.ink-group{display:flex;align-items:center;gap:6px;padding-inline-end:10px;border-inline-end:1px solid var(--line-soft)}
+.ink-group:last-child{border:0;margin-inline-start:auto;padding:0}
+.mx .ink-tool{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border-radius:10px;border:0;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500}
+.mx .ink-tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mx .ink-tool:hover{background:var(--primary-softer);filter:none}
+.mx .ink-tool[aria-pressed=true]{background:var(--ink);color:#fff}
+.mx .ink-sw{width:32px;height:32px;min-height:0;border-radius:999px;padding:0;border:3px solid #fff;box-shadow:0 0 0 1.5px var(--line)}
+.mx .ink-sw[aria-pressed=true]{box-shadow:0 0 0 2.5px var(--ink)}
+.mx .ink-size{width:40px;height:40px;min-height:0;padding:0;border-radius:10px;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center}
+.mx .ink-size i{display:block;border-radius:999px;background:var(--ink);min-width:3px;min-height:3px}
+.mx .ink-size[aria-pressed=true]{border-color:var(--ink)}
+.page-wrap{position:relative;display:inline-block}
+.page-wrap[hidden]{display:none}
+.page-wrap canvas{display:block}
+.page-wrap .ink{position:absolute;inset:0;background:transparent!important;box-shadow:none!important;touch-action:none;border-radius:6px}
+.reader-stage.drawing{overflow:hidden}
+.reader:fullscreen .ink-bar{position:sticky;top:0;z-index:6}
+@media(max-width:640px){.ink-tool span{display:none}.ink-group{padding-inline-end:6px}}
