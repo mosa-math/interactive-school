@@ -3,6 +3,7 @@ import {getGrades,saveGrades,createGrade,presentationsForGrade} from './data/gra
 import {getLessons,putBook,hasBook} from './data/database.mjs';
 import {curriculum,pagesLabel} from './data/curriculum.mjs';
 import {weekFor,matchLessons} from './data/week.mjs';
+import {renderReader,forgetBook} from './reader.mjs';
 import {getRoster,saveRoster,parseNames,makeGroups} from './data/roster.mjs';
 
 const root=document.getElementById('app');
@@ -28,7 +29,7 @@ const btnIco=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${P[k]}</svg>`;
 const students=k=>k===1?'طالب واحد':k===2?'طالبان':k<=10?`${n(k)} طلاب`:`${n(k)} طالبًا`;
 const settingsData=()=>{try{return JSON.parse(localStorage.getItem('teacher-school-settings')||'{}')}catch{return {}}};
 
-function setNav(route){const map={home:'#home',grade:'#home',roster:'#home','new-grade':'#home',tools:'#tools','school-settings':'#school-settings'};document.querySelectorAll('.topnav a').forEach(a=>{if(a.getAttribute('href')===map[route])a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});}
+function setNav(route){const map={home:'#home',grade:'#home',book:'#home',roster:'#home','new-grade':'#home',tools:'#tools','school-settings':'#school-settings'};document.querySelectorAll('.topnav a').forEach(a=>{if(a.getAttribute('href')===map[route])a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});}
 function frame(body,{stage=false}={}){stopTimer();root.classList.remove('ws');root.classList.add('mx');document.body.classList.toggle('stage',stage);root.innerHTML=body;}
 const gradeBadge=g=>g.cover?`<img class="gcover" src="${esc(g.cover)}" alt="غلاف كتاب الصف ${esc(g.name)}">`:`<span class="gbadge ${g.color}" aria-hidden="true">${esc((g.shortName||g.name).trim().charAt(0))}</span>`;
 const sectionsLabel=g=>g.sections.length===1?'فصل واحد':`${n(g.sections.length)} ${g.sections.length<=10?'فصول':'فصلًا'}`;
@@ -44,7 +45,7 @@ function home(){
       <div class="gcard-head">${gradeBadge(g)}<div><a href="#grade/${g.id}"><h3 class="gname">الصف ${esc(g.name)}</h3></a><span class="glabel">${sectionsLabel(g)}</span></div></div>
       <div class="mx-sec" style="gap:8px"><span class="glabel">ابدأ حصة مع</span><div class="chips">${g.sections.map(sec=>`<a class="chip" href="#tools/${g.id}/${sec.id}">${esc(sec.name)}</a>`).join('')}</div></div>
       <div class="gactions">
-        <a href="#grade/${g.id}/book">${ico('book')}الكتاب</a>
+        <a href="#book/${g.id}">${ico('book')}الكتاب</a>
         <a href="#grade/${g.id}">${ico('screen')}الدروس</a>
         <a href="#tools/${g.id}/${g.sections[0].id}">${ico('timer')}أدوات الحصة</a>
       </div>
@@ -68,7 +69,7 @@ function gradePage(g,sub){
   frame(`<nav class="mx-crumbs" aria-label="المسار"><a href="#home">صفوفي</a><span aria-hidden="true">/</span><span>الصف ${esc(g.name)}</span></nav>
   <section class="mx-row">
     <div class="gcard-head">${gradeBadge(g)}<div><h1 class="mx-title">الصف ${esc(g.name)}</h1><p class="mx-muted">${sectionsLabel(g)}${g.sections.length>1?' · الكتاب والدروس مشتركة بينها':''}</p></div></div>
-    <div class="chips"><button class="btn btn-outline" data-grade-book="${g.id}">${btnIco('book')}الكتاب</button><button class="btn btn-primary" data-new-grade-lesson="${g.id}">${btnIco('plus')}درس جديد من الكتاب</button></div>
+    <div class="chips"><a class="btn btn-outline" href="#book/${g.id}">${btnIco('book')}افتح الكتاب</a><button class="btn btn-primary" data-new-grade-lesson="${g.id}">${btnIco('plus')}درس جديد من الكتاب</button></div>
   </section>
   <section class="mx-sec" style="gap:12px"><h2 class="mx-h2">الفصول</h2><div class="class-grid">${g.sections.map(s=>{const count=getRoster(s.id).length;return `
     <div class="class-tile${s.id===current?' current':''}"><div class="links"><span class="class-name">${esc(s.name)}</span><a href="#roster/${g.id}/${s.id}">${count?`الكشف · ${students(count)}`:'أضف أسماء الطلاب'}</a></div><a class="btn btn-soft btn-sm" href="#tools/${g.id}/${s.id}">ابدأ الحصة</a></div>`}).join('')}</div></section>
@@ -78,7 +79,7 @@ function gradePage(g,sub){
   </section>`);
   hasBook(g.bookId).then(ok=>{const el=document.getElementById('book-note');if(el&&!ok)el.hidden=false;});
 }
-function itemRow(g,it,ci,ii){return `<div class="item"><div class="item-main">${it.code?`<span class="lcode">${n(it.code)}</span>`:''}<div><div class="item-title${it.kind==='T'?' muted-title':''}">${esc(it.title)}</div><div class="item-sub">صفحة ${n(pagesLabel(it))}</div></div></div><button class="btn btn-soft btn-sm" data-prepare-grade="${g.id}" data-ci="${ci}" data-ii="${ii}">حضّر الدرس</button></div>`;}
+function itemRow(g,it,ci,ii){return `<div class="item"><div class="item-main">${it.code?`<span class="lcode">${n(it.code)}</span>`:''}<div><div class="item-title${it.kind==='T'?' muted-title':''}">${esc(it.title)}</div><div class="item-sub">صفحة ${n(pagesLabel(it))}</div></div></div><div class="chips"><a class="btn btn-outline btn-sm" href="#book/${g.id}/${it.from}" aria-label="اعرض صفحات ${esc(it.title)} في الكتاب">اعرض</a><button class="btn btn-soft btn-sm" data-prepare-grade="${g.id}" data-ci="${ci}" data-ii="${ii}">حضّر الدرس</button></div></div>`;}
 function weekBox(g){const w=weekFor(g.name);if(!w)return '';const rows=matchLessons(g.id,w.week.lessons),hijri=s=>n(String(s||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/-/g,'/'));
   return `<section class="week-box"><div class="mx-row"><div><span class="glabel">${w.current?'دروس هذا الأسبوع':'دروس الأسبوع القادم'} حسب خطتك</span><h3 class="mx-h2">الأسبوع ${n(w.week.number)}</h3></div><span class="item-sub">${hijri(w.week.hijriFrom)} – ${hijri(w.week.hijriTo)}هـ</span></div><div class="mx-list">${rows.map(r=>r.item?itemRow(g,r.item,r.item.ci,r.item.ii):`<div class="item"><div class="item-title muted-title">${esc(r.text)}</div></div>`).join('')}</div></section>`;}
 function lessonList(g){const rows=presentationsForGrade(lessons,g),c=curriculum[g.id],w=weekFor(g.name),weekCh=w?new Set(matchLessons(g.id,w.week.lessons).filter(r=>r.item).map(r=>r.item.ci)):new Set();
@@ -86,7 +87,7 @@ function lessonList(g){const rows=presentationsForGrade(lessons,g),c=curriculum[
   const index=c?`<section class="mx-sec" style="gap:12px"><div class="mx-row"><h3 class="mx-h2" style="font-size:18px">فهرس الكتاب</h3><span class="item-sub">${esc(c.book)}</span></div>${c.chapters.map((ch,ci)=>`<details class="chap"${weekCh.has(ci)?' open':''}><summary><span>الفصل ${n(ch.number)}: ${esc(ch.title)}</span><span class="item-sub">${n(ch.items.filter(i=>i.kind!=='T').length)} دروس</span></summary><div class="mx-list">${ch.items.map((it,ii)=>itemRow(g,it,ci,ii)).join('')}</div></details>`).join('')}</section>`
     :(!rows.length?`<div class="mx-empty"><p>لا توجد دروس محفوظة لهذا الصف بعد. اختر صفحات الدرس من الكتاب ليُبنى منها العرض.</p><button class="btn btn-primary" data-new-grade-lesson="${g.id}">${btnIco('plus')}درس جديد من الكتاب</button></div>`:'');
   return `<div class="mx-sec" style="gap:24px"><div id="book-note" class="book-note" hidden><p>ملف الكتاب غير مرفق على هذا الجهاز بعد. أرفقه مرة واحدة، فتُفتح صفحات كل درس تلقائيًا عند التحضير.</p><button class="btn btn-primary btn-sm" data-grade-book="${g.id}">${btnIco('book')}إرفاق الكتاب</button></div>${weekBox(g)}${saved}${index}</div>`;}
-function bookView(g){return `<div class="mx-panel"><p>أرفق ملف PDF الرسمي للكتاب مرة واحدة على كل جهاز. يُحفظ في متصفحك فقط، ولا يُرفع إلى الموقع العام، وبعدها تُفتح صفحات أي درس من الفهرس تلقائيًا.</p>${g.bookUrl?`<a class="btn btn-outline" style="align-self:flex-start" href="${esc(g.bookUrl)}" target="_blank" rel="noopener">فتح رابط الكتاب</a>`:''}<label for="grade-pdf">إرفاق كتاب PDF على هذا الجهاز</label><input id="grade-pdf" data-owner="${g.id}" type="file" accept="application/pdf,.pdf"><p id="grade-status" role="status"></p><button class="btn btn-primary" style="align-self:flex-start" data-new-grade-lesson="${g.id}">${btnIco('book')}اختيار صفحات الدرس من الكتاب</button></div>`;}
+function bookView(g){return `<div class="mx-panel"><a class="btn btn-primary" style="align-self:flex-start" href="#book/${g.id}">${btnIco('book')}افتح الكتاب هنا</a><p>أرفق ملف PDF الرسمي للكتاب مرة واحدة على كل جهاز. يُحفظ في متصفحك فقط، ولا يُرفع إلى الموقع العام، وبعدها تُفتح صفحات أي درس من الفهرس تلقائيًا.</p>${g.bookUrl?`<a class="btn btn-outline" style="align-self:flex-start" href="${esc(g.bookUrl)}" target="_blank" rel="noopener">فتح رابط الكتاب</a>`:''}<label for="grade-pdf">إرفاق كتاب PDF على هذا الجهاز</label><input id="grade-pdf" data-owner="${g.id}" type="file" accept="application/pdf,.pdf"><p id="grade-status" role="status"></p><button class="btn btn-primary" style="align-self:flex-start" data-new-grade-lesson="${g.id}">${btnIco('book')}اختيار صفحات الدرس من الكتاب</button></div>`;}
 
 /* صف جديد والإعدادات */
 function newGrade(){frame(`<nav class="mx-crumbs"><a href="#home">صفوفي</a><span aria-hidden="true">/</span><span>صف جديد</span></nav><h1 class="mx-title">صف جديد</h1><form id="new-grade-form" class="mx-panel"><label for="grade-name">اسم الصف</label><input id="grade-name" required maxlength="80" placeholder="الخامس الابتدائي"><label for="grade-short">اسم الفصل المختصر</label><input id="grade-short" maxlength="60" placeholder="خامس"><label for="grade-count">عدد الفصول</label><input id="grade-count" type="number" min="1" max="20" value="1" required><label for="grade-color">اللون</label><select id="grade-color"><option value="green">أخضر</option><option value="orange">برتقالي</option></select><label for="grade-url">رابط الكتاب على بوابة عين، أو أرفق PDF أدناه</label><input id="grade-url" type="url" placeholder="https://" maxlength="1000"><label for="new-grade-pdf">أو كتاب PDF للاستخدام على هذا الجهاز فقط</label><input id="new-grade-pdf" type="file" accept="application/pdf,.pdf"><div class="chips"><button class="btn btn-primary" type="submit">إضافة الصف</button></div><p id="new-grade-status" role="status"></p></form>`);}
@@ -132,13 +133,14 @@ function pickStudent(){const box=document.getElementById('pick-box');if(!T.names
 /* التوجيه */
 export async function renderFolders(){
   const [route,id,section]=location.hash.slice(1).split('/');
-  if(!['home','grade','new-grade','school-settings','tools','roster'].includes(route)){stopTimer();root.classList.remove('mx');document.body.classList.remove('stage');setNav('');return;}
+  if(!['home','grade','new-grade','school-settings','tools','roster','book'].includes(route)){stopTimer();root.classList.remove('mx');document.body.classList.remove('stage');setNav('');return;}
   setNav(route);
   try{lessons=await getLessons().catch(()=>[]);const grades=getGrades(),g=grades.find(x=>x.id===id),s=g?.sections.find(x=>x.id===section);
     if(route==='home')home();
     else if(route==='new-grade')newGrade();
     else if(route==='school-settings')settings();
     else if(route==='grade')g?gradePage(g,section):missing();
+    else if(route==='book'){if(!g)missing();else{frame('');await renderReader(root,g,section);}}
     else if(route==='roster')g&&s?rosterPage(g,s):missing();
     else if(route==='tools'){if(!id)toolsChooser();else g&&s?toolsPage(g,s):missing();}
   }catch(e){frame(`<h1 class="mx-title">تعذر فتح البيانات</h1><p>${esc(e.message)}</p>`);}
@@ -175,7 +177,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
 }catch(err){alert(err.message);}});
 
 document.addEventListener('change',async e=>{try{if(e.target.id==='no-repeat'){T.noRepeat=e.target.checked;T.used=[];}
-  if(e.target.id==='grade-pdf'){const f=e.target.files[0];if(!f)return;const id=e.target.dataset.owner,bookId=await localBook(f,id);saveGrades(getGrades().map(g=>g.id===id?{...g,bookId}:g));document.getElementById('grade-status').textContent='حُفظ الكتاب على جهازك فقط.';}
+  if(e.target.id==='grade-pdf'){const f=e.target.files[0];if(!f)return;const id=e.target.dataset.owner,bookId=await localBook(f,id);const oldId=getGrades().find(g=>g.id===id)?.bookId;forgetBook(oldId);saveGrades(getGrades().map(g=>g.id===id?{...g,bookId}:g));document.getElementById('grade-status').textContent='حُفظ الكتاب على جهازك فقط.';if(e.target.dataset.reader)renderFolders();}
   if(e.target.id==='folder-import'){const f=e.target.files[0];if(!f)return;if(f.size>1000000)throw Error('الملف أكبر من الحد المسموح.');const d=JSON.parse(await f.text());if(d.version!==1)throw Error('ملف غير صالح.');if(!confirm('استبدال تنظيم الصفوف بالإصدار المستورد؟ صدّر نسخة أولًا.'))return;saveGrades(d.grades);if(d.settings&&typeof d.settings.school==='string'&&typeof d.settings.teacher==='string')localStorage.setItem('teacher-school-settings',JSON.stringify({school:d.settings.school.slice(0,180),teacher:d.settings.teacher.slice(0,100)}));settings();}
 }catch(err){alert(err.message);}});
 

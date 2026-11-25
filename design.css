@@ -195,3 +195,20 @@ body>header.topbar{display:block}
 .book-note{background:var(--accent-soft);border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .book-note[hidden]{display:none}
 .book-note p{margin:0;color:var(--accent-text);font-weight:500}
+/* قارئ الكتاب */
+.reader{display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.reader:fullscreen{padding:12px;overflow:auto}
+.reader-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:10px 12px;position:sticky;top:0;z-index:5}
+.reader-nav{display:flex;align-items:center;gap:8px}
+.mx .icon-btn{width:44px;padding:0}
+.mx .btn-outline svg{stroke:currentColor}
+.pg{display:flex;align-items:center;gap:8px;margin:0;font-weight:500;color:var(--ink-2)}
+.pg input{width:76px;text-align:center;padding:8px;min-height:44px}
+#rd-lesson{max-width:min(420px,100%);min-height:44px;padding:8px 10px}
+.reader-lesson{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:0}
+.reader-lesson:empty{display:none}
+.reader-lesson b{font-weight:600}
+.reader-stage{display:flex;justify-content:center;min-height:300px;overflow:auto}
+.reader-stage canvas{background:#fff;border-radius:6px;box-shadow:0 6px 24px #17212d26;max-width:none}
+.reader:fullscreen .reader-lesson{display:none}
+@media(max-width:640px){.reader-bar{position:static}#rd-lesson{order:3;width:100%;max-width:none}}
